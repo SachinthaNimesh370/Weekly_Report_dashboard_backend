@@ -1,0 +1,3 @@
+spring:
+  application:
+    name: Weekly_Report_Dashboard_BackEnd
