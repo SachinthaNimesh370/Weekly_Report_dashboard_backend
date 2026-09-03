@@ -392,7 +392,78 @@ List<ProjectResponse> getMyProjects(String email);
 
 ---
 
-## 11. Role-Based Access Control
+---
+
+## 11. Phase 3 — Weekly Report Core CRUD & Manager Review Workflow API
+
+### `ReportService` Interface Methods
+```java
+ReportResponse createDraftReport(ReportRequest request, String userEmail);
+ReportResponse updateReport(Long reportId, ReportRequest request, String userEmail);
+ReportResponse submitReport(Long reportId, String userEmail);
+ReportResponse getReportById(Long reportId, String userEmail, boolean isManagerOrAdmin);
+PaginatedResponse<ReportSummaryDto> getMyReports(String userEmail, ReportStatus status, int page, int size);
+PaginatedResponse<ReportSummaryDto> getManagerReports(LocalDate weekStart, Long userId, Long projectId, ReportStatus status, int page, int size);
+ReportResponse approveReport(Long reportId, String reviewerEmail);
+ReportResponse requestChanges(Long reportId, ReviewRequest reviewRequest, String reviewerEmail);
+List<ReportVersionResponse> getReportVersions(Long reportId, String userEmail, boolean isManagerOrAdmin);
+```
+
+### Report Status State Machine
+
+```
+   ┌───────────┐
+   │   DRAFT   │
+   └─────┬─────┘
+         │ submitReport()
+         ▼
+   ┌───────────┐
+   │ SUBMITTED │ ◄───────────────────┐
+   └─────┬─────┘                     │
+         │                           │
+    ┌────┴─────────────────┐         │
+    │                      │         │
+    │ approve()            │ requestChanges()
+    ▼                      ▼         │
+┌──────────┐      ┌──────────────────┴┐
+│ APPROVED │      │ NEEDS_CORRECTION  │
+└──────────┘      └────────┬──────────┘
+                           │
+                           │ edit() → submitReport()
+                           └─────────┘
+```
+
+### Endpoints Summary
+
+| Method | URL | Access Role | Description |
+|---|---|---|---|
+| POST | `/api/reports` | TEAM_MEMBER | Create draft report for a week |
+| PUT | `/api/reports/{id}` | Owner (TEAM_MEMBER) | Edit report while in DRAFT or NEEDS_CORRECTION |
+| POST | `/api/reports/{id}/submit` | Owner (TEAM_MEMBER) | Submit report for review (creates snapshot version) |
+| GET | `/api/reports/{id}` | Owner or MANAGER / ADMIN | Get full report details |
+| GET | `/api/reports/my` | TEAM_MEMBER | Get paginated own report history (optional `status`, `page`, `size`) |
+| GET | `/api/reports/{id}/versions` | Owner or MANAGER / ADMIN | Get all submission snapshot versions |
+| GET | `/api/manager/reports` | MANAGER / ADMIN | Filtered team reports list (`week`, `userId`, `projectId`, `status`, `page`, `size`) |
+| POST | `/api/manager/reports/{id}/approve` | MANAGER / ADMIN | Approve submitted report |
+| POST | `/api/manager/reports/{id}/request-changes` | MANAGER / ADMIN | Send back for correction with mandatory comment |
+
+### Critical Business Rules Enforced Server-Side
+
+1. **Rule 1 — Ownership**: Team members can only view/edit their own reports. Accessing another member's report returns `403 Forbidden`.
+2. **Rule 2 — Manager Read/Review Only**: Managers can view any team report, but cannot edit report content — only approve or request changes via review endpoints.
+3. **Rule 3 — Editable States**: A report is strictly editable only when status is `DRAFT` or `NEEDS_CORRECTION`. Once `SUBMITTED` or `APPROVED`, content edits return `400 Bad Request`.
+4. **Rule 4 — Valid Transitions**:
+   - `DRAFT` → `SUBMITTED`
+   - `NEEDS_CORRECTION` → `SUBMITTED`
+   - `SUBMITTED` → `APPROVED`
+   - `SUBMITTED` → `NEEDS_CORRECTION`
+   - Any other transition throws an error.
+5. **Rule 5 — Key Issue & Achievement Flags**: Exactly zero or one blocker can be flagged as `isKeyIssue = true`. Exactly zero or one achievement can be flagged as `isKeyAchievement = true`.
+6. **Rule 6 — Version Snapshot**: Upon submission, a JSON snapshot of the entire report is stored in `report_versions`, preserving history across correction cycles.
+
+---
+
+## 12. Role-Based Access Control
 
 | Action | ADMIN | MANAGER | TEAM_MEMBER |
 |---|:---:|:---:|:---:|
@@ -404,13 +475,19 @@ List<ProjectResponse> getMyProjects(String email);
 | View own projects | ✅ | ✅ | ✅ |
 | Update project | ✅ | ✅ | ❌ |
 | Deactivate project | ✅ | ❌ | ❌ |
-| Assign users | ✅ | ✅ | ❌ |
-| Remove users | ✅ | ✅ | ❌ |
-| View members | ✅ | ✅ | ✅ |
+| Assign / Remove users | ✅ | ✅ | ❌ |
+| Create draft report | ✅ | ✅ | ✅ |
+| Edit own report (draft / correction) | ✅ | ✅ | ✅ |
+| Edit other user's report | ❌ | ❌ | ❌ |
+| Submit own report | ✅ | ✅ | ✅ |
+| View own reports | ✅ | ✅ | ✅ |
+| View team reports & dashboard | ✅ | ✅ | ❌ |
+| Approve / Request changes | ✅ | ✅ | ❌ |
+| View version history | ✅ | ✅ | ✅ (own only) |
 
 ---
 
-## 12. Error Handling
+## 13. Error Handling
 
 All errors return unified JSON:
 
@@ -425,16 +502,16 @@ All errors return unified JSON:
 
 | HTTP | When |
 |---|---|
-| 400 | Validation failure / bad request |
+| 400 | Validation failure / illegal state transition |
 | 401 | Not authenticated / wrong credentials |
-| 403 | Role not permitted |
+| 403 | Forbidden (trying to access another user's report or manager endpoint) |
 | 404 | Resource not found |
-| 409 | Duplicate email or project name |
+| 409 | Duplicate report for same week or duplicate project/email |
 | 500 | Unexpected server error |
 
 ---
 
-## 13. Seed Data
+## 14. Seed Data
 
 Auto-created on startup by `DataInitializer.java`:
 
@@ -446,7 +523,7 @@ Auto-created on startup by `DataInitializer.java`:
 
 ---
 
-## 14. API Quick Reference
+## 15. API Quick Reference
 
 ```
 Base URL: http://localhost:8080
@@ -468,39 +545,108 @@ POST   /api/projects/{id}/members                    [Admin, Manager]
 DELETE /api/projects/{id}/members/{userId}           [Admin, Manager]
 GET    /api/projects/{id}/members                    [Auth]
 
+── WEEKLY REPORTS ──────────────────────────────────────────
+POST   /api/reports                                  [Member, Manager, Admin]
+PUT    /api/reports/{id}                             [Owner]
+POST   /api/reports/{id}/submit                      [Owner]
+GET    /api/reports/{id}                             [Owner or Manager/Admin]
+GET    /api/reports/my?status=&page=&size=           [Member]
+GET    /api/reports/{id}/versions                    [Owner or Manager/Admin]
+
+── MANAGER REVIEW WORKFLOW ─────────────────────────────────
+GET    /api/manager/reports?week=&userId=&projectId=&status=&page=&size=  [Manager, Admin]
+POST   /api/manager/reports/{id}/approve             [Manager, Admin]
+POST   /api/manager/reports/{id}/request-changes     [Manager, Admin]
+
 ── COMING SOON ─────────────────────────────────────────────
-Phase 3: /api/reports         Weekly Report CRUD
-Phase 4: /api/reports/reviews Manager Review API
-Phase 5: /api/dashboard       Statistics & Dashboard
+Phase 4: Dashboard Aggregations & Chart Endpoints (/api/manager/dashboard/**)
+Phase 5: AI Chat Assistant (/api/ai/chat)
 ```
 
 ---
 
-## 15. Postman Testing Guide
+## 16. Postman Testing Guide — Weekly Reports & Review Workflow
 
-### Postman Environment Variables
-| Variable | Value |
-|---|---|
-| `baseUrl` | `http://localhost:8080` |
-| `adminToken` | *(paste after login)* |
-| `managerToken` | *(paste after login)* |
-| `memberToken` | *(paste after login)* |
+### Sample JSON: Create Draft Weekly Report
 
-### Suggested Test Flow
+`POST http://localhost:8080/api/reports`
+Header: `Authorization: Bearer <memberToken>`
+
+```json
+{
+  "projectId": 1,
+  "weekStart": "2026-09-07",
+  "weekEnd": "2026-09-13",
+  "tasksPlannedNextWeek": "Complete analytics and chart integrations",
+  "notes": "Backend API ready for QA testing",
+  "taskEntries": [
+    {
+      "taskName": "Implement Auth & Security Layer",
+      "priority": "HIGH",
+      "plannedPct": 100,
+      "actualPct": 100,
+      "status": "DONE",
+      "timePlannedHrs": 12.0,
+      "timeSpentHrs": 10.5,
+      "outputDeliverable": "PR #1 merged with passing tests"
+    },
+    {
+      "taskName": "Weekly Report CRUD APIs",
+      "priority": "HIGH",
+      "plannedPct": 100,
+      "actualPct": 90,
+      "status": "IN_PROGRESS",
+      "timePlannedHrs": 16.0,
+      "timeSpentHrs": 14.0,
+      "outputDeliverable": "Draft & submit endpoints tested"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Waiting on final UI designs for dashboard charts",
+      "isKeyIssue": true
+    }
+  ],
+  "achievements": [
+    {
+      "description": "Completed full review workflow with automated version snapshotting",
+      "isKeyAchievement": true
+    }
+  ],
+  "hoursBreakdowns": [
+    {
+      "taskType": "DEVELOPMENT",
+      "hours": 24.5
+    },
+    {
+      "taskType": "MEETINGS",
+      "hours": 4.0
+    },
+    {
+      "taskType": "TESTING",
+      "hours": 6.0
+    }
+  ]
+}
 ```
-1. POST {{baseUrl}}/api/auth/login  (manager)  → save managerToken
-2. POST {{baseUrl}}/api/projects               → create project (id=1)
-3. POST {{baseUrl}}/api/projects/1/members     → assign user id=3
-4. GET  {{baseUrl}}/api/projects/1/members     → verify assignment
 
-5. POST {{baseUrl}}/api/auth/login  (member)   → save memberToken
-6. GET  {{baseUrl}}/api/projects/my            → see assigned project
-7. POST {{baseUrl}}/api/projects               → expect 403 ✅
+### Sample Request: Submit Report
+`POST http://localhost:8080/api/reports/{id}/submit`
+Header: `Authorization: Bearer <memberToken>`
 
-8. POST {{baseUrl}}/api/auth/login  (admin)    → save adminToken
-9. DELETE {{baseUrl}}/api/projects/1           → deactivate
-10. GET {{baseUrl}}/api/projects/all           → admin sees all
+### Sample Request: Manager Request Changes
+`POST http://localhost:8080/api/manager/reports/{id}/request-changes`
+Header: `Authorization: Bearer <managerToken>`
+
+```json
+{
+  "comment": "Please provide more details on the testing hours and deliverables."
+}
 ```
+
+### Sample Request: Manager Approve Report
+`POST http://localhost:8080/api/manager/reports/{id}/approve`
+Header: `Authorization: Bearer <managerToken>`
 
 ---
 
@@ -514,10 +660,13 @@ Phase 5: /api/dashboard       Statistics & Dashboard
 | Phase 2 | Project CRUD API | ✅ Complete |
 | Phase 2 | User-Project Assignment | ✅ Complete |
 | Phase 2 | RBAC enforcement | ✅ Complete |
-| Phase 3 | Weekly Report CRUD | 🔜 Next |
-| Phase 4 | Manager Review API | 🔜 Planned |
-| Phase 5 | Dashboard Statistics | 🔜 Planned |
+| Phase 3 | Weekly Report Core CRUD | ✅ Complete |
+| Phase 3 | Review & Correction Workflow | ✅ Complete |
+| Phase 3 | Version History & Snapshots | ✅ Complete |
+| Phase 4 | Dashboard Analytics & Charts | 🔜 Next |
+| Phase 5 | AI Chat Assistant (Optional) | 🔜 Planned |
 
 ---
 
-*Generated: 2026-09-03 | Developer: Sachinthaya Nimesh | Branch: auth*
+*Generated: 2026-09-03 | Developer: Sachinthaya Nimesh | Branch: reports*
+
