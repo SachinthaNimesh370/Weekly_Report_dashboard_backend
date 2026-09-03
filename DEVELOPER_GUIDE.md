@@ -558,8 +558,15 @@ GET    /api/manager/reports?week=&userId=&projectId=&status=&page=&size=  [Manag
 POST   /api/manager/reports/{id}/approve             [Manager, Admin]
 POST   /api/manager/reports/{id}/request-changes     [Manager, Admin]
 
+── DASHBOARD ANALYTICS & CHARTS ───────────────────────────
+GET    /api/manager/dashboard/summary?week=          [Manager, Admin]
+GET    /api/manager/dashboard/status?week=           [Manager, Admin]
+GET    /api/manager/dashboard/tasks-trend?weeks=     [Manager, Admin]
+GET    /api/manager/dashboard/projects?week=         [Manager, Admin]
+GET    /api/manager/dashboard/time-distribution?week=[Manager, Admin]
+GET    /api/manager/dashboard/activity?limit=        [Manager, Admin]
+
 ── COMING SOON ─────────────────────────────────────────────
-Phase 4: Dashboard Aggregations & Chart Endpoints (/api/manager/dashboard/**)
 Phase 5: AI Chat Assistant (/api/ai/chat)
 ```
 
@@ -650,6 +657,49 @@ Header: `Authorization: Bearer <managerToken>`
 
 ---
 
+## 17. Phase 4 — Manager Dashboard Analytics & Visualizations API
+
+### `DashboardService` Interface Methods
+```java
+DashboardSummaryResponse getSummary(LocalDate weekStart);
+List<MemberStatusDto> getMemberStatus(LocalDate weekStart);
+List<TasksTrendDto> getTasksTrend(int numberOfWeeks);
+List<ProjectWorkloadDto> getProjectWorkload(LocalDate weekStart);
+List<TimeDistributionDto> getTimeDistribution(LocalDate weekStart);
+List<ActivityFeedDto> getRecentActivity(int limit);
+```
+
+### Endpoints Overview
+
+| Method | URL | Access Role | Description |
+|---|---|---|---|
+| GET | `/api/manager/dashboard/summary?week=` | MANAGER, ADMIN | Compliance rate, submitted, needs correction, open blockers, not started |
+| GET | `/api/manager/dashboard/status?week=` | MANAGER, ADMIN | Status by member including derived `NOT_STARTED` |
+| GET | `/api/manager/dashboard/tasks-trend?weeks=6` | MANAGER, ADMIN | Chronological tasks completed trend for Recharts/Chart.js |
+| GET | `/api/manager/dashboard/projects?week=` | MANAGER, ADMIN | Workload & task count distribution by project |
+| GET | `/api/manager/dashboard/time-distribution?week=` | MANAGER, ADMIN | Hours spent by task type (Development, Meetings, etc.) |
+| GET | `/api/manager/dashboard/activity?limit=10` | MANAGER, ADMIN | Recent activity stream (approvals, revisions, submissions) |
+
+### Sample Response: `/api/manager/dashboard/summary`
+```json
+{
+  "success": true,
+  "message": "Dashboard summary retrieved successfully",
+  "data": {
+    "weekStart": "2026-09-07",
+    "totalActiveMembers": 5,
+    "totalReportsSubmitted": 4,
+    "complianceRate": 80.0,
+    "needsCorrectionCount": 1,
+    "openBlockersCount": 2,
+    "draftCount": 0,
+    "notStartedCount": 1
+  }
+}
+```
+
+---
+
 ## Development Progress
 
 | Phase | Feature | Status |
@@ -663,10 +713,11 @@ Header: `Authorization: Bearer <managerToken>`
 | Phase 3 | Weekly Report Core CRUD | ✅ Complete |
 | Phase 3 | Review & Correction Workflow | ✅ Complete |
 | Phase 3 | Version History & Snapshots | ✅ Complete |
-| Phase 4 | Dashboard Analytics & Charts | 🔜 Next |
-| Phase 5 | AI Chat Assistant (Optional) | 🔜 Planned |
+| Phase 4 | Dashboard Analytics & Charts | ✅ Complete |
+| Phase 5 | AI Chat Assistant (Optional) | 🔜 Next |
 
 ---
 
-*Generated: 2026-09-03 | Developer: Sachinthaya Nimesh | Branch: reports*
+*Generated: 2026-09-03 | Developer: Sachinthaya Nimesh*
+
 
