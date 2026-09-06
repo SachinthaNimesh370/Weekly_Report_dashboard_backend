@@ -73,8 +73,11 @@ graph TD
 
 ## 🚀 Live Deployment & Environments
 
-- **Production Host**: AWS EC2 Linux (`Ubuntu 22.04 LTS`)
-- **Base REST URL**: `http://52.66.241.245:8080`
+| Component | URL | Description |
+| :--- | :--- | :--- |
+| **🌐 Frontend (Live)** | [`http://3.6.126.90/`](http://3.6.126.90/) | React 19 SPA served via Nginx on AWS EC2 |
+| **⚙️ Backend API** | `http://52.66.241.245:8080` | Spring Boot 3 REST API (this repository) |
+
 - **Database**: MySQL 8.0 with automated Hibernate DDL updates
 - **Process Supervision**: Systemd (`weekly-report.service`)
 
