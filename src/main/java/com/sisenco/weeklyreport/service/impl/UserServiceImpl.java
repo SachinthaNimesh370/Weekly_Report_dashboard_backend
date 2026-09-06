@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -132,7 +133,7 @@ public class UserServiceImpl implements UserService {
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                .projectCount(user.getProjects() != null ? user.getProjects().size() : 0)
+                .projectCount(0)
                 .build();
     }
 }
