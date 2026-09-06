@@ -64,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().getName())
+                .isActive(savedUser.getIsActive())
                 .build();
     }
 
@@ -94,6 +95,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole().getName())
+                .isActive(user.getIsActive())
                 .build();
     }
 
