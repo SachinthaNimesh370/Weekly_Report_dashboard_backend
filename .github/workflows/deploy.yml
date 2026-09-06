@@ -68,10 +68,7 @@ jobs:
             if [ -n "$GEMINI_KEY" ]; then
               echo "Configuring GEMINI_API_KEY in systemd override..."
               sudo mkdir -p /etc/systemd/system/weekly-report.service.d
-              cat <<EOF | sudo tee /etc/systemd/system/weekly-report.service.d/override.conf
-[Service]
-Environment="GEMINI_API_KEY=$GEMINI_KEY"
-EOF
+              printf '[Service]\nEnvironment="GEMINI_API_KEY=%s"\n' "$GEMINI_KEY" | sudo tee /etc/systemd/system/weekly-report.service.d/override.conf
               sudo systemctl daemon-reload
             fi
 
