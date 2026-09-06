@@ -57,11 +57,24 @@ jobs:
 
       - name: Restart Spring Boot
         uses: appleboy/ssh-action@v1
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GEMINI_KEY
           script: |
+            if [ -n "$GEMINI_KEY" ]; then
+              echo "Configuring GEMINI_API_KEY in systemd override..."
+              sudo mkdir -p /etc/systemd/system/weekly-report.service.d
+              cat <<EOF | sudo tee /etc/systemd/system/weekly-report.service.d/override.conf
+[Service]
+Environment="GEMINI_API_KEY=$GEMINI_KEY"
+EOF
+              sudo systemctl daemon-reload
+            fi
+
             echo "=== Systemd Service Definition ==="
             sudo systemctl cat weekly-report
 
