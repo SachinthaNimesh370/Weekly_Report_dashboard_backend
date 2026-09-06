@@ -4,6 +4,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring Security](https://img.shields.io/badge/Spring%20Security-JWT-6DB33F?logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![AWS RDS](https://img.shields.io/badge/AWS%20RDS-MySQL%208.0-527FFF?logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/)
 [![Hibernate / JPA](https://img.shields.io/badge/Hibernate-ORM-59666C?logo=hibernate&logoColor=white)](https://hibernate.org/)
 [![Google Gemini](https://img.shields.io/badge/AI-Gemini%203.8%20Flash-8E75B2?logo=google&logoColor=white)](https://ai.google.dev/)
 [![CI/CD](https://img.shields.io/badge/GitHub%20Actions-Automated%20Deploy-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
@@ -62,7 +63,7 @@ graph TD
         Services --> UserService[UserService]
         Services --> AiService[AiService - RAG Engine]
         Services --> Repos[Spring Data JPA Repositories]
-        Repos --> MySQL[(MySQL 8 Database)]
+        Repos ---> RDS[(AWS RDS — MySQL 8)]
     end
 
     AiService -->|Live Context Queries| Repos
@@ -77,8 +78,9 @@ graph TD
 | :--- | :--- | :--- |
 | **🌐 Frontend (Live)** | [`http://3.6.126.90/`](http://3.6.126.90/) | React 19 SPA served via Nginx on AWS EC2 |
 | **⚙️ Backend API** | `http://52.66.241.245:8080` | Spring Boot 3 REST API (this repository) |
+| **🗄️ Database** | AWS RDS (MySQL 8.0) | Managed relational database on Amazon RDS — separate from the EC2 host |
 
-- **Database**: MySQL 8.0 with automated Hibernate DDL updates
+- **Database**: **AWS RDS (MySQL 8.0)** — fully managed, hosted on Amazon RDS (not on EC2). Hibernate DDL is set to `update` mode.
 - **Process Supervision**: Systemd (`weekly-report.service`)
 
 ---
@@ -251,7 +253,7 @@ erDiagram
 ### Prerequisites
 - **JDK 17** (Temurin, Corretto, or OpenJDK)
 - **Maven 3.8+** (or bundled `./mvnw`)
-- **MySQL 8.0+**
+- **MySQL 8.0+** — local instance for development, or access credentials for the **AWS RDS (MySQL 8.0)** production instance
 
 ### 1. Clone the Repository
 ```bash
@@ -262,7 +264,10 @@ cd Weekly_Report_dashboard_backend
 ### 2. Configure Environment Variables
 Create a local `.env` file (which is gitignored) or set environment variables:
 ```bash
+# Local development (plain MySQL)
 DB_URL=jdbc:mysql://localhost:3306/sisenco_weekly_report?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+# Production (AWS RDS endpoint — replace with your RDS hostname)
+# DB_URL=jdbc:mysql://<rds-endpoint>:3306/sisenco_weekly_report?useSSL=true&serverTimezone=UTC
 DB_USERNAME=root
 DB_PASSWORD=your_mysql_password
 JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
@@ -288,13 +293,15 @@ The server starts on **`http://localhost:8080`**.
 
 | Variable | Default / Example | Description |
 | :--- | :--- | :--- |
-| `DB_URL` | `jdbc:mysql://52.66.241.245:3306/sisenco` | JDBC database connection string |
-| `DB_USERNAME` | `sisenco_user` | MySQL database user |
-| `DB_PASSWORD` | `******` | MySQL database password |
+| `DB_URL` | `jdbc:mysql://<rds-endpoint>:3306/sisenco` | JDBC connection string — points to **AWS RDS (MySQL 8.0)** in production |
+| `DB_USERNAME` | `sisenco_user` | RDS database user |
+| `DB_PASSWORD` | `******` | RDS database password |
 | `JWT_SECRET` | 256-bit hex/base64 string | Secret key for signing authentication tokens |
 | `JWT_EXPIRATION_MS` | `86400000` (24 hours) | Token validity duration in milliseconds |
 | `GEMINI_API_KEY` | *(Optional)* | Google Generative Language API key for AI Assistant |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model identifier |
+
+> 💡 **AWS RDS Note**: The production database runs on **Amazon RDS (MySQL 8.0)**, a fully managed relational database service. The RDS instance is **not** co-located on the EC2 host — the Spring Boot application running on EC2 connects to RDS via its private endpoint over the same AWS VPC.
 
 ---
 
