@@ -23,7 +23,7 @@ public class AiController {
     private final AiService aiService;
 
     @PostMapping("/chat")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<ChatResponse>> chat(
             @Valid @RequestBody ChatRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
