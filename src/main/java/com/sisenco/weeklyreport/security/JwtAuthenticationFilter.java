@@ -45,6 +45,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
+                    if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+                        log.warn("Blocked request from deactivated user: {}", userEmail);
+                        response.setContentType(org.springframework.http.MediaType.APPLICATION_JSON_VALUE);
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        com.sisenco.weeklyreport.dto.response.ApiResponse<Void> apiResponse =
+                                com.sisenco.weeklyreport.dto.response.ApiResponse.error("User account is deactivated. Please contact an administrator.");
+                        response.getWriter().write(new com.fasterxml.jackson.databind.ObjectMapper()
+                                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                                .writeValueAsString(apiResponse));
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,

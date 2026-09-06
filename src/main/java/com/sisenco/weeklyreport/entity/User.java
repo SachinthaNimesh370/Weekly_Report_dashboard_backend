@@ -39,6 +39,9 @@ public class User {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "department", length = 100)
+    private String department;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

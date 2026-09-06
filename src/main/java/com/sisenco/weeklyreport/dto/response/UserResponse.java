@@ -6,17 +6,21 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-    private String token;
-    @Builder.Default
-    private String tokenType = "Bearer";
+public class UserResponse {
     private Long id;
     private String fullName;
     private String email;
     private RoleName role;
+    private String roleName;
+    private String department;
     private Boolean isActive;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private Integer projectCount;
 }
