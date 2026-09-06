@@ -56,6 +56,7 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "project_id")
     )
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Builder.Default
     private Set<Project> projects = new HashSet<>();
 }

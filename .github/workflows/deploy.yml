@@ -62,9 +62,16 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            if [ -d "/home/ubuntu/Weekly_Report_dashboard_backend/target/target" ]; then
-              cp -fv /home/ubuntu/Weekly_Report_dashboard_backend/target/target/*.jar /home/ubuntu/Weekly_Report_dashboard_backend/target/
+            echo "=== Systemd Service Definition ==="
+            sudo systemctl cat weekly-report
+
+            LATEST_JAR=$(find /home/ubuntu -name "*.jar" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | awk '{print $2}')
+            echo "Latest JAR found: $LATEST_JAR"
+
+            if [ -n "$LATEST_JAR" ]; then
+              find /home/ubuntu -maxdepth 3 -type d -name "target" -exec cp -fv "$LATEST_JAR" {}/ \;
             fi
+
             sudo systemctl restart weekly-report
             sleep 5
             sudo systemctl status weekly-report --no-pager
