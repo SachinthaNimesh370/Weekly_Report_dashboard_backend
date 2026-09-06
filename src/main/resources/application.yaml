@@ -4,12 +4,13 @@ server:
 spring:
   application:
     name: Weekly_Report_Dashboard_BackEnd
+
   datasource:
-  #url: jdbc:mysql://localhost:3306/weekly_report_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    url: jdbc:mysql://database-1.cl2qko44u25r.ap-south-1.rds.amazonaws.com:3306/weekly_report_db?useSSL=true&serverTimezone=UTC
-    username: root
-    password: Rash1206
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -22,5 +23,5 @@ spring:
 
 app:
   jwt:
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-    expiration-ms: 86400000 # 24 hours
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
