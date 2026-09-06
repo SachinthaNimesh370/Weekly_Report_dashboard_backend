@@ -52,6 +52,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "target/*.jar"
           target: "/home/ubuntu/Weekly_Report_dashboard_backend/target/"
+          strip_components: 1
           overwrite: true
 
       - name: Restart Spring Boot
@@ -61,6 +62,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            if [ -d "/home/ubuntu/Weekly_Report_dashboard_backend/target/target" ]; then
+              cp -fv /home/ubuntu/Weekly_Report_dashboard_backend/target/target/*.jar /home/ubuntu/Weekly_Report_dashboard_backend/target/
+            fi
             sudo systemctl restart weekly-report
             sleep 5
             sudo systemctl status weekly-report --no-pager
